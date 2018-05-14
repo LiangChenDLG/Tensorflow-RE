@@ -95,7 +95,7 @@ def main(_):
                 feed_dict[m.input_pos1] = total_pos1
                 feed_dict[m.input_pos2] = total_pos2
                 feed_dict[m.input_y] = y_batch
-                feed_dict[m.keep_prob] = [0.5]
+                feed_dict[m.keep_prob] = 0.5
 
                 temp, step, loss, accuracy, summary, l2_loss, final_loss = sess.run(
                     [train_op, global_step, m.total_loss, m.accuracy, merged_summary, m.l2_loss, m.final_loss],
