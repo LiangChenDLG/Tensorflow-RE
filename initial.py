@@ -612,8 +612,8 @@ def get_metadata():
     f.close()
     fwrite.close()
 
-#init()
+init()
 seperate()
-#getsmall()
-#getans()
-#get_metadata()
+getsmall()
+getans()
+get_metadata()
