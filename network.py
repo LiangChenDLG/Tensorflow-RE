@@ -27,6 +27,7 @@ class GRU:
         self.gru_size = gru_size = settings.gru_size
         self.big_num = big_num = settings.big_num
 
+        self.keep_prob = tf.placeholder(dtype=tf.float32, shape=[1], name='keep_prob')
         self.input_word = tf.placeholder(dtype=tf.int32, shape=[None, num_steps], name='input_word')
         self.input_pos1 = tf.placeholder(dtype=tf.int32, shape=[None, num_steps], name='input_pos1')
         self.input_pos2 = tf.placeholder(dtype=tf.int32, shape=[None, num_steps], name='input_pos2')
@@ -48,8 +49,8 @@ class GRU:
         gru_cell_backward = tf.nn.rnn_cell.GRUCell(gru_size)
 
         if is_training and settings.keep_prob < 1:
-            gru_cell_forward = tf.nn.rnn_cell.DropoutWrapper(gru_cell_forward, output_keep_prob=settings.keep_prob)
-            gru_cell_backward = tf.nn.rnn_cell.DropoutWrapper(gru_cell_backward, output_keep_prob=settings.keep_prob)
+            gru_cell_forward = tf.nn.rnn_cell.DropoutWrapper(gru_cell_forward, output_keep_prob=self.keep_prob)
+            gru_cell_backward = tf.nn.rnn_cell.DropoutWrapper(gru_cell_backward, output_keep_prob=self.keep_prob)
 
         cell_forward = tf.nn.rnn_cell.MultiRNNCell([gru_cell_forward] * settings.num_layers)
         cell_backward = tf.nn.rnn_cell.MultiRNNCell([gru_cell_backward] * settings.num_layers)
