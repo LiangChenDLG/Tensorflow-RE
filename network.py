@@ -27,7 +27,7 @@ class GRU:
         self.gru_size = gru_size = settings.gru_size
         self.big_num = big_num = settings.big_num
 
-        self.keep_prob = tf.placeholder(dtype=tf.float32, shape=[1], name='keep_prob')
+        self.keep_prob = tf.placeholder(dtype=tf.float32, shape=(), name='keep_prob')
         self.input_word = tf.placeholder(dtype=tf.int32, shape=[None, num_steps], name='input_word')
         self.input_pos1 = tf.placeholder(dtype=tf.int32, shape=[None, num_steps], name='input_pos1')
         self.input_pos2 = tf.placeholder(dtype=tf.int32, shape=[None, num_steps], name='input_pos2')
