@@ -39,7 +39,7 @@ def main(_):
     test_settings = network.Settings()
     test_settings.vocab_size = 114044
     test_settings.num_classes = 53
-    test_settings.big_num = 262 * 9
+    test_settings.big_num = 50
     big_num_test = test_settings.big_num
 
     big_num = settings.big_num
@@ -103,8 +103,8 @@ def main(_):
                 feed_dict[m.input_y] = y_batch
                 feed_dict[m.keep_prob] = 0.5
 
-                temp, step, loss, accuracy, summary, l2_loss, final_loss = sess.run(
-                    [train_op, global_step, m.total_loss, m.accuracy, merged_summary, m.l2_loss, m.final_loss],
+                temp, step, loss, accuracy, summary, l2_loss, final_loss, debug_output_forward = sess.run(
+                    [train_op, global_step, m.total_loss, m.accuracy, merged_summary, m.l2_loss, m.final_loss, m.output_forward],
                     feed_dict)
                 time_str = datetime.datetime.now().isoformat()
                 accuracy = np.reshape(np.array(accuracy), (big_num))
@@ -113,10 +113,18 @@ def main(_):
 
                 if step % 50 == 0:
                     tempstr = "{}: step {}, softmax_loss {:g}, acc {:g}".format(time_str, step, loss, acc)
-                    print(tempstr)
-                    if itchat_run:
-                        itchat.send(tempstr, FLAGS.wechat_name)
+                    print(debug_output_forward[0][1])
+                    print('\n')
+                    print(tempstr + '\n')
+                    label_not_NA_num = 0
+                    for i in y_batch :
+                        if i[0] != 1 :
+                            label_not_NA_num += 1
+                    print('not NA num : '+ str(label_not_NA_num) + '\n') 
+                    
 
+                if step >= 10000:
+                    print('finished 10000 trains')
 
             def test_step(word_batch, pos1_batch, pos2_batch, y_batch):
                 feed_dict = {}
@@ -233,6 +241,8 @@ def main(_):
                     path = saver.save(sess, save_path + 'ATT_GRU_model', global_step=current_step)
                     tempstr = 'have saved model to ' + path
                     print(tempstr)
+                if current_step >= 10000:
+                    break
 
         # TEST
         for i in [0]:
