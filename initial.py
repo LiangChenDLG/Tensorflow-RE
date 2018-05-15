@@ -76,14 +76,20 @@ def init():
             break
 
         content = content.strip().split()
-        # get entity name
-        en1 = content[2]
-        en2 = content[3]
+
         relation = 0
         if content[4] not in relation2id:
             relation = relation2id['NA']
+        # here we delete all training data that is NA
+        elif content[4] == 'NA' :
+            continue
         else:
             relation = relation2id[content[4]]
+
+        # get entity name
+        en1 = content[2]
+        en2 = content[3]
+
         # put the same entity pair sentences into a dict
         tup = (en1, en2)
         label_tag = 0
@@ -170,13 +176,18 @@ def init():
             break
 
         content = content.strip().split()
-        en1 = content[2]
-        en2 = content[3]
+
         relation = 0
         if content[4] not in relation2id:
             relation = relation2id['NA']
+            # here we delete all training data that is NA
+        elif content[4] == 'NA':
+            continue
         else:
             relation = relation2id[content[4]]
+
+        en1 = content[2]
+        en2 = content[3]
         tup = (en1, en2)
 
         if tup not in test_sen:
