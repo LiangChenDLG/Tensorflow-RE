@@ -1,6 +1,9 @@
 import numpy as np
 import os
+import random
 
+train_NA_keep = 0.1
+test_NA_keep = 0.1
 
 # embedding the position
 def pos_embed(x):
@@ -78,11 +81,12 @@ def init():
         content = content.strip().split()
 
         relation = 0
+
+        # here we delete part of the training data that is NA
+        if content[4] == 'NA' and random.random() >= train_NA_keep:
+            continue
         if content[4] not in relation2id:
             relation = relation2id['NA']
-        # here we delete all training data that is NA
-        elif content[4] == 'NA' :
-            continue
         else:
             relation = relation2id[content[4]]
 
@@ -178,11 +182,12 @@ def init():
         content = content.strip().split()
 
         relation = 0
+
+        # here we delete part of the training data that is NA
+        if content[4] == 'NA' and random.random() >= test_NA_keep:
+            continue
         if content[4] not in relation2id:
             relation = relation2id['NA']
-            # here we delete all training data that is NA
-        elif content[4] == 'NA':
-            continue
         else:
             relation = relation2id[content[4]]
 
