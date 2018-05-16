@@ -2,14 +2,14 @@ import numpy as np
 import os
 import random
 
-train_NA_keep = 0.1
-test_NA_keep = 0.1
+train_NA_keep = 0
+test_NA_keep = 0
 
 # embedding the position
 def pos_embed(x):
     if x < -60:
         return 0
-    if x >= -60 and x <= 60:
+    if -60 <= x <= 60:
         return x + 61
     if x > 60:
         return 122
@@ -31,7 +31,7 @@ def init():
     print('reading word embedding data...')
     vec = []
     word2id = {}
-    f = open('./origin_data/vec.txt')
+    f = open('./origin_data/KBP/vec.txt')
     f.readline()
     while True:
         content = f.readline()
@@ -45,15 +45,14 @@ def init():
     f.close()
     word2id['UNK'] = len(word2id)
     word2id['BLANK'] = len(word2id)
-
+	
     dim = 50
-    vec.append(np.random.normal(size=dim, loc=0, scale=0.05))
-    vec.append(np.random.normal(size=dim, loc=0, scale=0.05))
-    vec = np.array(vec, dtype=np.float32)
+    vec.append(np.random.normal(size=dim,loc=0,scale=0.05))
+    vec.append(np.random.normal(size=dim,loc=0,scale=0.05))
 
     print('reading relation to id')
     relation2id = {}
-    f = open('./origin_data/relation2id.txt', 'r')
+    f = open('./origin_data/KBP/relation2id.txt', 'r', encoding='utf-8')
     while True:
         content = f.readline()
         if content == '':
@@ -71,7 +70,7 @@ def init():
     train_ans = {}  # {entity pair:[label1,label2,...]} the label is one-hot vector
 
     print('reading train data...')
-    f = open('./origin_data/train.txt', 'r')
+    f = open('./origin_data/KBP/train.txt', 'r', encoding='utf-8')
 
     while True:
         content = f.readline()
@@ -80,20 +79,18 @@ def init():
 
         content = content.strip().split()
 
-        relation = 0
-
         # here we delete part of the training data that is NA
         if content[4] == 'NA' and random.random() >= train_NA_keep:
             continue
-        if content[4] not in relation2id:
-            relation = relation2id['NA']
-        else:
-            relation = relation2id[content[4]]
 
         # get entity name
         en1 = content[2]
         en2 = content[3]
-
+        relation = 0
+        if content[4] not in relation2id:
+            relation = relation2id['NA']
+        else:
+            relation = relation2id[content[4]]
         # put the same entity pair sentences into a dict
         tup = (en1, en2)
         label_tag = 0
@@ -124,25 +121,7 @@ def init():
 
         en1pos = 0
         en2pos = 0
-        '''
-        here for a sentence like :
-        The quick brown fox jumps over the lazy dog.
 
-        for entity pair : (fox, dog)
-        and known entities: quick, brown, jumps, lazy
-        we get output:
-        [
-            [indexOf(UNK), -3 + 61, -8 + 61],
-            [indexOf(quick), -2 + 61, -7 + 61],
-            [indexOf(brown), -1 + 61, -6 + 61],
-            [indexOf(fox), 0 + 61, -5 + 61],
-            ...
-            [indexOf(dog), 5 + 61, 0 + 61],
-            [indexOf(BLANK), 6 + 61, 1 + 61],
-            ...
-            [indexOf(BLANK), 122, 122]
-        ]
-        '''
         for i in range(len(sentence)):
             if sentence[i] == en1:
                 en1pos = i
@@ -159,7 +138,19 @@ def init():
         for i in range(min(fixlen, len(sentence))):
             word = 0
             if sentence[i] not in word2id:
-                word = word2id['UNK']
+                ps = sentence[i].split('_')
+                avg_vec = np.zeros(dim)
+                c = 0
+                for p in ps:
+                    if p in word2id:
+                        c += 1
+                        avg_vec += vec[word2id[p]]
+                if c > 0:
+                    avg_vec = avg_vec / c
+                    word2id[sentence[i]] = len(word2id)
+                    vec.append(avg_vec)
+                else:
+                    word = word2id['UNK']
             else:
                 word = word2id[sentence[i]]
 
@@ -172,15 +163,16 @@ def init():
     test_sen = {}  # {entity pair:[[sentence 1],[sentence 2]...]}
     test_ans = {}  # {entity pair:[labels,...]} the labels is N-hot vector (N is the number of multi-label)
 
-    f = open('./origin_data/test.txt', 'r')
-
+    f = open('./origin_data/KBP/test.txt', 'r', encoding='utf-8')
+    count = 0
     while True:
         content = f.readline()
         if content == '':
             break
 
         content = content.strip().split()
-
+        en1 = content[2]
+        en2 = content[3]
         relation = 0
 
         # here we delete part of the training data that is NA
@@ -190,10 +182,8 @@ def init():
             relation = relation2id['NA']
         else:
             relation = relation2id[content[4]]
-
-        en1 = content[2]
-        en2 = content[3]
         tup = (en1, en2)
+        count += 1
 
         if tup not in test_sen:
             test_sen[tup] = []
@@ -227,12 +217,26 @@ def init():
         for i in range(min(fixlen, len(sentence))):
             word = 0
             if sentence[i] not in word2id:
-                word = word2id['UNK']
+                ps = sentence[i].split('_')
+                avg_vec = np.zeros(dim)
+                c = 0
+                for p in ps:
+                    if p in word2id:
+                        c += 1
+                        avg_vec += vec[word2id[p]]
+                if c > 0:
+                    avg_vec = avg_vec / c
+                    word2id[sentence[i]] = len(word2id)
+                    vec.append(avg_vec)
+                else:
+                    word = word2id['UNK']
             else:
                 word = word2id[sentence[i]]
 
             output[i][0] = word
         test_sen[tup].append(output)
+
+    vec = np.array(vec, dtype=np.float32)
 
     train_x = []
     train_y = []
@@ -240,7 +244,7 @@ def init():
     test_y = []
 
     print('organizing train data')
-    f = open('./data/train_q&a.txt', 'w')
+    f = open('./data/KBP/train_q&a.txt', 'w', encoding='utf-8')
     temp = 0
     for i in train_sen:
         if len(train_ans[i]) != len(train_sen[i]):
@@ -254,7 +258,7 @@ def init():
     f.close()
 
     print('organizing test data')
-    f = open('./data/test_q&a.txt', 'w')
+    f = open('./data/KBP/test_q&a.txt', 'w', encoding='utf-8')
     temp = 0
     for i in test_sen:
         test_x.append(test_sen[i])
@@ -272,63 +276,64 @@ def init():
     test_x = np.array(test_x)
     test_y = np.array(test_y)
 
-    np.save('./data/vec.npy', vec)
-    np.save('./data/train_x.npy', train_x)
-    np.save('./data/train_y.npy', train_y)
-    np.save('./data/testall_x.npy', test_x)
-    np.save('./data/testall_y.npy', test_y)
+    np.save('./data/KBP/vec.npy', vec)
+    np.save('./data/KBP/train_x.npy', train_x)
+    np.save('./data/KBP/train_y.npy', train_y)
+    np.save('./data/KBP/testall_x.npy', test_x)
+    np.save('./data/KBP/testall_y.npy', test_y)
 
     # get test data for P@N evaluation, in which only entity pairs with more than 1 sentence exist
-    print('get test data for p@n test')
+    # print('get test data for p@n test')
+    #
+    # pone_test_x = []
+    # pone_test_y = []
+    #
+    # ptwo_test_x = []
+    # ptwo_test_y = []
+    #
+    # pall_test_x = []
+    # pall_test_y = []
+    #
+    # for i in range(len(test_x)):
+    #     if len(test_x[i]) > 1:
+    #
+    #         pall_test_x.append(test_x[i])
+    #         pall_test_y.append(test_y[i])
+    #
+    #         onetest = []
+    #         temp = np.random.randint(len(test_x[i]))
+    #         onetest.append(test_x[i][temp])
+    #         pone_test_x.append(onetest)
+    #         pone_test_y.append(test_y[i])
+    #
+    #         twotest = []
+    #         temp1 = np.random.randint(len(test_x[i]))
+    #         temp2 = np.random.randint(len(test_x[i]))
+    #         while temp1 == temp2:
+    #             temp2 = np.random.randint(len(test_x[i]))
+    #         twotest.append(test_x[i][temp1])
+    #         twotest.append(test_x[i][temp2])
+    #         ptwo_test_x.append(twotest)
+    #         ptwo_test_y.append(test_y[i])
+    #
+    # pone_test_x = np.array(pone_test_x)
+    # pone_test_y = np.array(pone_test_y)
+    # ptwo_test_x = np.array(ptwo_test_x)
+    # ptwo_test_y = np.array(ptwo_test_y)
+    # pall_test_x = np.array(pall_test_x)
+    # pall_test_y = np.array(pall_test_y)
+    #
+    # np.save('./data/pone_test_x.npy', pone_test_x)
+    # np.save('./data/pone_test_y.npy', pone_test_y)
+    # np.save('./data/ptwo_test_x.npy', ptwo_test_x)
+    # np.save('./data/ptwo_test_y.npy', ptwo_test_y)
+    # np.save('./data/pall_test_x.npy', pall_test_x)
+    # np.save('./data/pall_test_y.npy', pall_test_y)
 
-    pone_test_x = []
-    pone_test_y = []
-
-    ptwo_test_x = []
-    ptwo_test_y = []
-
-    pall_test_x = []
-    pall_test_y = []
-
-    for i in range(len(test_x)):
-        if len(test_x[i]) > 1:
-
-            pall_test_x.append(test_x[i])
-            pall_test_y.append(test_y[i])
-
-            onetest = []
-            temp = np.random.randint(len(test_x[i]))
-            onetest.append(test_x[i][temp])
-            pone_test_x.append(onetest)
-            pone_test_y.append(test_y[i])
-
-            twotest = []
-            temp1 = np.random.randint(len(test_x[i]))
-            temp2 = np.random.randint(len(test_x[i]))
-            while temp1 == temp2:
-                temp2 = np.random.randint(len(test_x[i]))
-            twotest.append(test_x[i][temp1])
-            twotest.append(test_x[i][temp2])
-            ptwo_test_x.append(twotest)
-            ptwo_test_y.append(test_y[i])
-
-    pone_test_x = np.array(pone_test_x)
-    pone_test_y = np.array(pone_test_y)
-    ptwo_test_x = np.array(ptwo_test_x)
-    ptwo_test_y = np.array(ptwo_test_y)
-    pall_test_x = np.array(pall_test_x)
-    pall_test_y = np.array(pall_test_y)
-
-    np.save('./data/pone_test_x.npy', pone_test_x)
-    np.save('./data/pone_test_y.npy', pone_test_y)
-    np.save('./data/ptwo_test_x.npy', ptwo_test_x)
-    np.save('./data/ptwo_test_y.npy', ptwo_test_y)
-    np.save('./data/pall_test_x.npy', pall_test_x)
-    np.save('./data/pall_test_y.npy', pall_test_y)
 
 def seperate():
     print('reading training data')
-    x_train = np.load('./data/train_x.npy')
+    x_train = np.load('./data/KBP/train_x.npy')
 
     train_word = []
     train_pos1 = []
@@ -353,117 +358,114 @@ def seperate():
         train_word.append(word)
         train_pos1.append(pos1)
         train_pos2.append(pos2)
-    x_train = 0
 
     train_word = np.array(train_word)
     train_pos1 = np.array(train_pos1)
     train_pos2 = np.array(train_pos2)
-    np.save('./data/train_word.npy', train_word)
-    np.save('./data/train_pos1.npy', train_pos1)
-    np.save('./data/train_pos2.npy', train_pos2)
+    np.save('./data/KBP/train_word.npy', train_word)
+    np.save('./data/KBP/train_pos1.npy', train_pos1)
+    np.save('./data/KBP/train_pos2.npy', train_pos2)
 
-    print('reading p-one test data')
-    x_test = np.load('./data/pone_test_x.npy')
-    print('seperating p-one test data')
-    test_word = []
-    test_pos1 = []
-    test_pos2 = []
-
-    for i in range(len(x_test)):
-        word = []
-        pos1 = []
-        pos2 = []
-        for j in x_test[i]:
-            temp_word = []
-            temp_pos1 = []
-            temp_pos2 = []
-            for k in j:
-                temp_word.append(k[0])
-                temp_pos1.append(k[1])
-                temp_pos2.append(k[2])
-            word.append(temp_word)
-            pos1.append(temp_pos1)
-            pos2.append(temp_pos2)
-        test_word.append(word)
-        test_pos1.append(pos1)
-        test_pos2.append(pos2)
-
-    test_word = np.array(test_word)
-    test_pos1 = np.array(test_pos1)
-    test_pos2 = np.array(test_pos2)
-    np.save('./data/pone_test_word.npy', test_word)
-    np.save('./data/pone_test_pos1.npy', test_pos1)
-    np.save('./data/pone_test_pos2.npy', test_pos2)
-
-    print('reading p-two test data')
-    x_test = np.load('./data/ptwo_test_x.npy')
-    print('seperating p-two test data')
-    test_word = []
-    test_pos1 = []
-    test_pos2 = []
-
-    for i in range(len(x_test)):
-        word = []
-        pos1 = []
-        pos2 = []
-        for j in x_test[i]:
-            temp_word = []
-            temp_pos1 = []
-            temp_pos2 = []
-            for k in j:
-                temp_word.append(k[0])
-                temp_pos1.append(k[1])
-                temp_pos2.append(k[2])
-            word.append(temp_word)
-            pos1.append(temp_pos1)
-            pos2.append(temp_pos2)
-        test_word.append(word)
-        test_pos1.append(pos1)
-        test_pos2.append(pos2)
-
-    test_word = np.array(test_word)
-    test_pos1 = np.array(test_pos1)
-    test_pos2 = np.array(test_pos2)
-    np.save('./data/ptwo_test_word.npy', test_word)
-    np.save('./data/ptwo_test_pos1.npy', test_pos1)
-    np.save('./data/ptwo_test_pos2.npy', test_pos2)
-
-    print('reading p-all test data')
-    x_test = np.load('./data/pall_test_x.npy')
-    print('seperating p-all test data')
-    test_word = []
-    test_pos1 = []
-    test_pos2 = []
-
-    for i in range(len(x_test)):
-        word = []
-        pos1 = []
-        pos2 = []
-        for j in x_test[i]:
-            temp_word = []
-            temp_pos1 = []
-            temp_pos2 = []
-            for k in j:
-                temp_word.append(k[0])
-                temp_pos1.append(k[1])
-                temp_pos2.append(k[2])
-            word.append(temp_word)
-            pos1.append(temp_pos1)
-            pos2.append(temp_pos2)
-        test_word.append(word)
-        test_pos1.append(pos1)
-        test_pos2.append(pos2)
-
-    test_word = np.array(test_word)
-    test_pos1 = np.array(test_pos1)
-    test_pos2 = np.array(test_pos2)
-    np.save('./data/pall_test_word.npy', test_word)
-    np.save('./data/pall_test_pos1.npy', test_pos1)
-    np.save('./data/pall_test_pos2.npy', test_pos2)
-
+    # print('reading p-one test data')
+    # x_test = np.load('./data/pone_test_x.npy')
+    # print('seperating p-one test data')
+    # test_word = []
+    # test_pos1 = []
+    # test_pos2 = []
+    #
+    # for i in range(len(x_test)):
+    #     word = []
+    #     pos1 = []
+    #     pos2 = []
+    #     for j in x_test[i]:
+    #         temp_word = []
+    #         temp_pos1 = []
+    #         temp_pos2 = []
+    #         for k in j:
+    #             temp_word.append(k[0])
+    #             temp_pos1.append(k[1])
+    #             temp_pos2.append(k[2])
+    #         word.append(temp_word)
+    #         pos1.append(temp_pos1)
+    #         pos2.append(temp_pos2)
+    #     test_word.append(word)
+    #     test_pos1.append(pos1)
+    #     test_pos2.append(pos2)
+    #
+    # test_word = np.array(test_word)
+    # test_pos1 = np.array(test_pos1)
+    # test_pos2 = np.array(test_pos2)
+    # np.save('./data/pone_test_word.npy', test_word)
+    # np.save('./data/pone_test_pos1.npy', test_pos1)
+    # np.save('./data/pone_test_pos2.npy', test_pos2)
+    #
+    # print('reading p-two test data')
+    # x_test = np.load('./data/ptwo_test_x.npy')
+    # print('seperating p-two test data')
+    # test_word = []
+    # test_pos1 = []
+    # test_pos2 = []
+    #
+    # for i in range(len(x_test)):
+    #     word = []
+    #     pos1 = []
+    #     pos2 = []
+    #     for j in x_test[i]:
+    #         temp_word = []
+    #         temp_pos1 = []
+    #         temp_pos2 = []
+    #         for k in j:
+    #             temp_word.append(k[0])
+    #             temp_pos1.append(k[1])
+    #             temp_pos2.append(k[2])
+    #         word.append(temp_word)
+    #         pos1.append(temp_pos1)
+    #         pos2.append(temp_pos2)
+    #     test_word.append(word)
+    #     test_pos1.append(pos1)
+    #     test_pos2.append(pos2)
+    #
+    # test_word = np.array(test_word)
+    # test_pos1 = np.array(test_pos1)
+    # test_pos2 = np.array(test_pos2)
+    # np.save('./data/ptwo_test_word.npy', test_word)
+    # np.save('./data/ptwo_test_pos1.npy', test_pos1)
+    # np.save('./data/ptwo_test_pos2.npy', test_pos2)
+    #
+    # print('reading p-all test data')
+    # x_test = np.load('./data/pall_test_x.npy')
+    # print('seperating p-all test data')
+    # test_word = []
+    # test_pos1 = []
+    # test_pos2 = []
+    #
+    # for i in range(len(x_test)):
+    #     word = []
+    #     pos1 = []
+    #     pos2 = []
+    #     for j in x_test[i]:
+    #         temp_word = []
+    #         temp_pos1 = []
+    #         temp_pos2 = []
+    #         for k in j:
+    #             temp_word.append(k[0])
+    #             temp_pos1.append(k[1])
+    #             temp_pos2.append(k[2])
+    #         word.append(temp_word)
+    #         pos1.append(temp_pos1)
+    #         pos2.append(temp_pos2)
+    #     test_word.append(word)
+    #     test_pos1.append(pos1)
+    #     test_pos2.append(pos2)
+    #
+    # test_word = np.array(test_word)
+    # test_pos1 = np.array(test_pos1)
+    # test_pos2 = np.array(test_pos2)
+    # np.save('./data/pall_test_word.npy', test_word)
+    # np.save('./data/pall_test_pos1.npy', test_pos1)
+    # np.save('./data/pall_test_pos2.npy', test_pos2)
     print('seperating test all data')
-    x_test = np.load('./data/testall_x.npy')
-
+    x_test = np.load('./data/KBP/testall_x.npy')
     test_word = []
     test_pos1 = []
     test_pos2 = []
@@ -491,145 +493,146 @@ def seperate():
     test_pos1 = np.array(test_pos1)
     test_pos2 = np.array(test_pos2)
 
-    np.save('./data/testall_word.npy', test_word)
-    np.save('./data/testall_pos1.npy', test_pos1)
-    np.save('./data/testall_pos2.npy', test_pos2)
+    np.save('./data/KBP/testall_word.npy', test_word)
+    np.save('./data/KBP/testall_pos1.npy', test_pos1)
+    np.save('./data/KBP/testall_pos2.npy', test_pos2)
 
 
-def getsmall():
-    print('reading training data')
-    word = np.load('./data/train_word.npy')
-    pos1 = np.load('./data/train_pos1.npy')
-    pos2 = np.load('./data/train_pos2.npy')
-    y = np.load('./data/train_y.npy')
-
-    new_word = []
-    new_pos1 = []
-    new_pos2 = []
-    new_y = []
-
-    # we slice some big batch in train data into small batches in case of running out of memory
-    print('get small training data')
-    for i in range(len(word)):
-        lenth = len(word[i])
-        if lenth <= 1000:
-            new_word.append(word[i])
-            new_pos1.append(pos1[i])
-            new_pos2.append(pos2[i])
-            new_y.append(y[i])
-
-        if lenth > 1000 and lenth < 2000:
-            new_word.append(word[i][:1000])
-            new_word.append(word[i][1000:])
-
-            new_pos1.append(pos1[i][:1000])
-            new_pos1.append(pos1[i][1000:])
-
-            new_pos2.append(pos2[i][:1000])
-            new_pos2.append(pos2[i][1000:])
-
-            new_y.append(y[i])
-            new_y.append(y[i])
-
-        if lenth > 2000 and lenth < 3000:
-            new_word.append(word[i][:1000])
-            new_word.append(word[i][1000:2000])
-            new_word.append(word[i][2000:])
-
-            new_pos1.append(pos1[i][:1000])
-            new_pos1.append(pos1[i][1000:2000])
-            new_pos1.append(pos1[i][2000:])
-
-            new_pos2.append(pos2[i][:1000])
-            new_pos2.append(pos2[i][1000:2000])
-            new_pos2.append(pos2[i][2000:])
-
-            new_y.append(y[i])
-            new_y.append(y[i])
-            new_y.append(y[i])
-
-        if lenth > 3000 and lenth < 4000:
-            new_word.append(word[i][:1000])
-            new_word.append(word[i][1000:2000])
-            new_word.append(word[i][2000:3000])
-            new_word.append(word[i][3000:])
-
-            new_pos1.append(pos1[i][:1000])
-            new_pos1.append(pos1[i][1000:2000])
-            new_pos1.append(pos1[i][2000:3000])
-            new_pos1.append(pos1[i][3000:])
-
-            new_pos2.append(pos2[i][:1000])
-            new_pos2.append(pos2[i][1000:2000])
-            new_pos2.append(pos2[i][2000:3000])
-            new_pos2.append(pos2[i][3000:])
-
-            new_y.append(y[i])
-            new_y.append(y[i])
-            new_y.append(y[i])
-            new_y.append(y[i])
-
-        if lenth > 4000:
-            new_word.append(word[i][:1000])
-            new_word.append(word[i][1000:2000])
-            new_word.append(word[i][2000:3000])
-            new_word.append(word[i][3000:4000])
-            new_word.append(word[i][4000:])
-
-            new_pos1.append(pos1[i][:1000])
-            new_pos1.append(pos1[i][1000:2000])
-            new_pos1.append(pos1[i][2000:3000])
-            new_pos1.append(pos1[i][3000:4000])
-            new_pos1.append(pos1[i][4000:])
-
-            new_pos2.append(pos2[i][:1000])
-            new_pos2.append(pos2[i][1000:2000])
-            new_pos2.append(pos2[i][2000:3000])
-            new_pos2.append(pos2[i][3000:4000])
-            new_pos2.append(pos2[i][4000:])
-
-            new_y.append(y[i])
-            new_y.append(y[i])
-            new_y.append(y[i])
-            new_y.append(y[i])
-            new_y.append(y[i])
-
-    new_word = np.array(new_word)
-    new_pos1 = np.array(new_pos1)
-    new_pos2 = np.array(new_pos2)
-    new_y = np.array(new_y)
-
-    np.save('./data/small_word.npy', new_word)
-    np.save('./data/small_pos1.npy', new_pos1)
-    np.save('./data/small_pos2.npy', new_pos2)
-    np.save('./data/small_y.npy', new_y)
+# def getsmall():
+#     print('reading training data')
+#     word = np.load('./data/train_word.npy')
+#     pos1 = np.load('./data/train_pos1.npy')
+#     pos2 = np.load('./data/train_pos2.npy')
+#     y = np.load('./data/train_y.npy')
+#
+#     new_word = []
+#     new_pos1 = []
+#     new_pos2 = []
+#     new_y = []
+#
+#     # we slice some big batch in train data into small batches in case of running out of memory
+#     print('get small training data')
+#     for i in range(len(word)):
+#         length = len(word[i])
+#         if length <= 1000:
+#             new_word.append(word[i])
+#             new_pos1.append(pos1[i])
+#             new_pos2.append(pos2[i])
+#             new_y.append(y[i])
+#
+#         if 1000 < length < 2000:
+#             new_word.append(word[i][:1000])
+#             new_word.append(word[i][1000:])
+#
+#             new_pos1.append(pos1[i][:1000])
+#             new_pos1.append(pos1[i][1000:])
+#
+#             new_pos2.append(pos2[i][:1000])
+#             new_pos2.append(pos2[i][1000:])
+#
+#             new_y.append(y[i])
+#             new_y.append(y[i])
+#
+#         if 2000 < length < 3000:
+#             new_word.append(word[i][:1000])
+#             new_word.append(word[i][1000:2000])
+#             new_word.append(word[i][2000:])
+#
+#             new_pos1.append(pos1[i][:1000])
+#             new_pos1.append(pos1[i][1000:2000])
+#             new_pos1.append(pos1[i][2000:])
+#
+#             new_pos2.append(pos2[i][:1000])
+#             new_pos2.append(pos2[i][1000:2000])
+#             new_pos2.append(pos2[i][2000:])
+#
+#             new_y.append(y[i])
+#             new_y.append(y[i])
+#             new_y.append(y[i])
+#
+#         if 3000 < length < 4000:
+#             new_word.append(word[i][:1000])
+#             new_word.append(word[i][1000:2000])
+#             new_word.append(word[i][2000:3000])
+#             new_word.append(word[i][3000:])
+#
+#             new_pos1.append(pos1[i][:1000])
+#             new_pos1.append(pos1[i][1000:2000])
+#             new_pos1.append(pos1[i][2000:3000])
+#             new_pos1.append(pos1[i][3000:])
+#
+#             new_pos2.append(pos2[i][:1000])
+#             new_pos2.append(pos2[i][1000:2000])
+#             new_pos2.append(pos2[i][2000:3000])
+#             new_pos2.append(pos2[i][3000:])
+#
+#             new_y.append(y[i])
+#             new_y.append(y[i])
+#             new_y.append(y[i])
+#             new_y.append(y[i])
+#
+#         if length > 4000:
+#             new_word.append(word[i][:1000])
+#             new_word.append(word[i][1000:2000])
+#             new_word.append(word[i][2000:3000])
+#             new_word.append(word[i][3000:4000])
+#             new_word.append(word[i][4000:])
+#
+#             new_pos1.append(pos1[i][:1000])
+#             new_pos1.append(pos1[i][1000:2000])
+#             new_pos1.append(pos1[i][2000:3000])
+#             new_pos1.append(pos1[i][3000:4000])
+#             new_pos1.append(pos1[i][4000:])
+#
+#             new_pos2.append(pos2[i][:1000])
+#             new_pos2.append(pos2[i][1000:2000])
+#             new_pos2.append(pos2[i][2000:3000])
+#             new_pos2.append(pos2[i][3000:4000])
+#             new_pos2.append(pos2[i][4000:])
+#
+#             new_y.append(y[i])
+#             new_y.append(y[i])
+#             new_y.append(y[i])
+#             new_y.append(y[i])
+#             new_y.append(y[i])
+#
+#     new_word = np.array(new_word)
+#     new_pos1 = np.array(new_pos1)
+#     new_pos2 = np.array(new_pos2)
+#     new_y = np.array(new_y)
+#
+#     np.save('./data/small_word.npy', new_word)
+#     np.save('./data/small_pos1.npy', new_pos1)
+#     np.save('./data/small_pos2.npy', new_pos2)
+#     np.save('./data/small_y.npy', new_y)
 
 
 # get answer metric for PR curve evaluation
 def getans():
-    test_y = np.load('./data/testall_y.npy')
+    test_y = np.load('./data/KBP/testall_y.npy')
     eval_y = []
     for i in test_y:
         eval_y.append(i[1:])
     allans = np.reshape(eval_y, (-1))
-    np.save('./data/allans.npy', allans)
+    np.save('./data/KBP/allans.npy', allans)
 
 
-def get_metadata():
-    fwrite = open('./data/metadata.tsv', 'w')
-    f = open('./origin_data/vec.txt')
-    f.readline()
-    while True:
-        content = f.readline().strip()
-        if content == '':
-            break
-        name = content.split()[0]
-        fwrite.write(name + '\n')
-    f.close()
-    fwrite.close()
+# def get_metadata():
+#     fwrite = open('./data/metadata.tsv', 'w', encoding='utf-8')
+#     f = open('./origin_data/vec.txt', encoding='utf-8')
+#     f.readline()
+#     while True:
+#         content = f.readline().strip()
+#         if content == '':
+#             break
+#         name = content.split()[0]
+#         fwrite.write(name + '\n')
+#     f.close()
+#     fwrite.close()
+
 
 init()
 seperate()
-getsmall()
+# getsmall()
 getans()
-get_metadata()
+# get_metadata()
