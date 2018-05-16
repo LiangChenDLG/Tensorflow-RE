@@ -16,7 +16,7 @@ FLAGS = tf.app.flags.FLAGS
 
 
 def main(_):
-    fout = fopen('extrated.json', 'w')
+    fout = open('extrated.json', 'w')
     data_out = {}
     # ATTENTION: change pathname before you load your model
     pathname = "./model/kbp/ATT_GRU_model-"
@@ -80,11 +80,11 @@ def main(_):
                 pos2 = 0
                 for i in range(len(word_batch)) :
                     for pos_ind in range(len(total_pos1[i]))
-                        if total_pos[i][pos_ind] == 61 :
+                        if total_pos1[i][pos_ind] == 61 :
                             pos1 = total_word[i][pos_ind]
                             break
                     for pos_ind in range(len(total_pos2[i]))
-                        if total_pos[i][pos_ind] == 61 :
+                        if total_pos2[i][pos_ind] == 61 :
                             pos2 = total_word[i][pos_ind]
                             break
                 entities_pair = str(pos1) + ' ' + str(pos2)
