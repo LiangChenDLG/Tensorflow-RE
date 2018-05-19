@@ -75,8 +75,8 @@ def main(_):
                 feed_dict[mtest.input_pos2] = total_pos2
                 feed_dict[mtest.input_y] = y_batch
 
-                loss, accuracy, predictions, word_attention, sentence_attention= sess.run(
-                    [mtest.loss, mtest.accuracy, mtest.predictions, mtest.word_attention, mtest.sentence_attention], feed_dict)
+                loss, accuracy, predictions, word_attention, sentence_attention, prob= sess.run(
+                    [mtest.loss, mtest.accuracy, mtest.predictions, mtest.word_attention, mtest.sentence_attention, mtest.prob], feed_dict)
 
                 for i in range(len(word_batch)) :
                     new_out = {}
@@ -92,10 +92,10 @@ def main(_):
                             break
                     entities_pair = o_batch[i][0][pos1] + ' ' + o_batch[i][0][pos2]
                     print(entities_pair)
-                    new_out['p'] = np.argmax(np.array(predictions[i]))
-                    new_out['a'] = accuracy[i]
-                    new_out['w'] = word_attention[total_shape[i] : total_shape[i+1]]
-                    new_out['s'] = sentence_attention[i][0]
+                    new_out['p'] = predictions[i]
+                    new_out['a'] = prob[predictions[i]]
+                    new_out['w'] = list(word_attention[total_shape[i] : total_shape[i+1]])
+                    new_out['s'] = list(sentence_attention[i][0])
                     new_out['o'] = o_batch[i]
                     data_out[entities_pair] = new_out
                 return predictions, accuracy
