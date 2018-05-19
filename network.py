@@ -147,10 +147,8 @@ class GRU:
                     tf.reduce_mean(tf.cast(tf.equal(self.predictions[i], tf.argmax(self.input_y[i], 0)), "float"),
                                    name="accuracy"))
 
-        self.sentence_attention = []
-        for i in range(len(sen_alpha)):
-            self.sentence_attention.append(tf.reshape(sen_alpha[i], [batch_size]))
-            
+        self.sentence_attention = sen_alpha
+
         # tf.summary.scalar('loss',self.total_loss)
         tf.summary.scalar('loss', self.total_loss)
         # regularization
