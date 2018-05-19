@@ -82,12 +82,12 @@ def main(_):
                     new_out = {}
                     pos1 = 0
                     pos2 = 0
-                    for pos_ind in range(len(total_pos1[i])) :
-                        if total_pos1[i][pos_ind] == 61 :
+                    for pos_ind in range(len(total_pos1[total_shape[i]])):
+                        if total_pos1[total_shape[i]][pos_ind] == 61:
                             pos1 = pos_ind
                             break
-                    for pos_ind in range(len(total_pos2[i])) :
-                        if total_pos2[i][pos_ind] == 61 :
+                    for pos_ind in range(len(total_pos2[total_shape[i]])):
+                        if total_pos2[total_shape[i]][pos_ind] == 61:
                             pos2 = pos_ind
                             break
                     entities_pair = o_batch[i][0][pos1] + ' ' + o_batch[i][0][pos2]
