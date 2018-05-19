@@ -84,13 +84,14 @@ def main(_):
                     pos2 = 0
                     for pos_ind in range(len(total_pos1[i])) :
                         if total_pos1[i][pos_ind] == 61 :
-                            pos1 = total_word[i][pos_ind]
+                            pos1 = pos_ind
                             break
                     for pos_ind in range(len(total_pos2[i])) :
                         if total_pos2[i][pos_ind] == 61 :
-                            pos2 = total_word[i][pos_ind]
+                            pos2 = pos_ind
                             break
                     entities_pair = o_batch[i][pos1] + ' ' + o_batch[i][pos2]
+                    print(entities_pair)
                     new_out['p'] = np.argmax(np.array(predictions[i]))
                     new_out['a'] = accuracy[i]
                     new_out['w'] = word_attention[total_shape[i] : total_shape[i+1]]
