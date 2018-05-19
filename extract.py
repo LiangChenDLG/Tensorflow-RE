@@ -17,7 +17,7 @@ FLAGS = tf.app.flags.FLAGS
 
 
 def main(_):
-    fout = open('extrated.json', 'w')
+    fout = open('extracted.json', 'w')
     data_out = {}
     # ATTENTION: change pathname before you load your model
     pathname = "./model/kbp/ATT_GRU_model-"
@@ -93,11 +93,18 @@ def main(_):
                             break
                     entities_pair = o_batch[i][0][pos1] + ' ' + o_batch[i][0][pos2]
                     print(entities_pair)
+                    # p: predictions
+                    # a: accuracy
+                    # w: word_attention
+                    # s: sentence_attention
+                    # o: original sentence
+                    # t: true relation
                     new_out['p'] = predictions[i].item()
                     new_out['a'] = prob[i][predictions[i]].item()
                     new_out['w'] = word_attention[total_shape[i] : total_shape[i+1]].tolist()
                     new_out['s'] = sentence_attention[i][0].tolist()
                     new_out['o'] = o_batch[i]
+                    new_out['t'] = y_batch[i]
                     data_out[entities_pair] = new_out
                 return predictions, accuracy
 
