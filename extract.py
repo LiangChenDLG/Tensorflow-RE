@@ -104,7 +104,7 @@ def main(_):
                     new_out['w'] = word_attention[total_shape[i] : total_shape[i+1]].tolist()
                     new_out['s'] = sentence_attention[i][0].tolist()
                     new_out['o'] = o_batch[i]
-                    new_out['t'] = np.argmax(y_batch[i],1)
+                    new_out['t'] = np.argmax(y_batch[i], 0)
                     data_out[entities_pair] = new_out
                 return predictions, accuracy
 
