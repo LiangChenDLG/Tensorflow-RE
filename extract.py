@@ -8,6 +8,7 @@ import os
 import network
 import utils
 import sys
+import json
 
 FLAGS = tf.app.flags.FLAGS
 
@@ -138,7 +139,8 @@ def main(_):
                        f1,
                        recall,
                        precision))
+            fout.write(json.dumps(data_out))
 
 
 if __name__ == "__main__":
-    tf.app.run()
+
