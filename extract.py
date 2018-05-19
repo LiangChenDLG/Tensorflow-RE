@@ -90,7 +90,7 @@ def main(_):
                         if total_pos2[i][pos_ind] == 61 :
                             pos2 = pos_ind
                             break
-                    entities_pair = o_batch[i][pos1] + ' ' + o_batch[i][pos2]
+                    entities_pair = o_batch[i][0][pos1] + ' ' + o_batch[i][0][pos2]
                     print(entities_pair)
                     new_out['p'] = np.argmax(np.array(predictions[i]))
                     new_out['a'] = accuracy[i]
