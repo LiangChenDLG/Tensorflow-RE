@@ -93,7 +93,7 @@ def main(_):
                     entities_pair = o_batch[i][pos1] + ' ' + o_batch[i][pos2]
                     new_out['p'] = np.argmax(np.array(predictions[i]))
                     new_out['a'] = accuracy[i]
-                    new_out['w'] = word_attention[i]
+                    new_out['w'] = word_attention[total_shape[i] : total_shape[i+1]]
                     new_out['s'] = sentence_attention[i]
                     new_out['o'] = o_batch[i]
                     data_out[entities_pair] = new_out
