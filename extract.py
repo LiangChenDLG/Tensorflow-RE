@@ -31,6 +31,7 @@ def main(_):
     test_word = np.load('./data/KBP/testall_word.npy')
     test_pos1 = np.load('./data/KBP/testall_pos1.npy')
     test_pos2 = np.load('./data/KBP/testall_pos2.npy')
+    test_o = np.load('./data/KBP/testall_o.npy')
 
     print(test_y[0])
     test_settings = network.Settings()
@@ -43,7 +44,7 @@ def main(_):
         sess = tf.Session()
         with sess.as_default():
 
-            def test_step(word_batch, pos1_batch, pos2_batch, y_batch):
+            def test_step(word_batch, pos1_batch, pos2_batch, y_batch, o_batch):
 
                 feed_dict = {}
                 total_shape = []
@@ -76,18 +77,26 @@ def main(_):
 
                 loss, accuracy, predictions, word_attention, sentence_attention= sess.run(
                     [mtest.loss, mtest.accuracy, mtest.predictions, mtest.word_attention, mtest.sentence_attention], feed_dict)
-                pos1 = 0
-                pos2 = 0
+
                 for i in range(len(word_batch)) :
-                    for pos_ind in range(len(total_pos1[i]))
+                    new_out = {}
+                    pos1 = 0
+                    pos2 = 0
+                    for pos_ind in range(len(total_pos1[i])) :
                         if total_pos1[i][pos_ind] == 61 :
                             pos1 = total_word[i][pos_ind]
                             break
-                    for pos_ind in range(len(total_pos2[i]))
+                    for pos_ind in range(len(total_pos2[i])) :
                         if total_pos2[i][pos_ind] == 61 :
                             pos2 = total_word[i][pos_ind]
                             break
-                entities_pair = str(pos1) + ' ' + str(pos2)
+                    entities_pair = o_batch[i][pos1] + ' ' + o_batch[i][pos2]
+                    new_out['p'] = np.argmax(np.array(predictions[i]))
+                    new_out['a'] = accuracy[i]
+                    new_out['w'] = word_attention[i]
+                    new_out['s'] = sentence_attention[i]
+                    new_out['o'] = o_batch[i]
+                    data_out[entities_pair] = new_out
                 return predictions, accuracy
 
             with tf.variable_scope("model"):
@@ -109,11 +118,12 @@ def main(_):
                 all_accuracy = []
 
                 for i in range(int(len(test_word) / float(test_settings.big_num))):
-                    pred, accuracy = test_step(test_word[i * test_settings.big_num:(i + 1) * test_settings.big_num],
+                    predictions, accuracy = test_step(test_word[i * test_settings.big_num:(i + 1) * test_settings.big_num],
                                                test_pos1[i * test_settings.big_num:(i + 1) * test_settings.big_num],
                                                test_pos2[i * test_settings.big_num:(i + 1) * test_settings.big_num],
-                                               test_y[i * test_settings.big_num:(i + 1) * test_settings.big_num])
-                    pred = np.array(pred)
+                                               test_y[i * test_settings.big_num:(i + 1) * test_settings.big_num],
+                                               test_o[i * test_settings.big_num:(i + 1) * test_settings.big_num])
+                    pred = np.array(predictions)
                     all_pred.append(pred)
                     all_true.append(test_y[i * test_settings.big_num:(i + 1) * test_settings.big_num])
                     all_accuracy.append(accuracy)

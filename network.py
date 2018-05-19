@@ -108,10 +108,11 @@ class GRU:
 
         # word-level attention layer
         output_h = tf.add(output_forward, output_backward)
-        self.word_attention = tf.reshape(tf.nn.softmax(
+        word_attention = tf.reshape(tf.nn.softmax(
             tf.reshape(tf.matmul(tf.reshape(tf.tanh(output_h), [total_num * num_steps, gru_size]), attention_w),
                        [total_num, num_steps])), [total_num, 1, num_steps])
-        attention_r = tf.reshape(tf.matmul(self.word_attention, output_h), [total_num, gru_size])
+        attention_r = tf.reshape(tf.matmul(word_attention, output_h), [total_num, gru_size])
+        self.word_attention = tf.reshape(word_attention, [total_num, num_steps])
 
         # sentence-level attention layer
         for i in range(big_num):
@@ -145,7 +146,8 @@ class GRU:
                 self.accuracy.append(
                     tf.reduce_mean(tf.cast(tf.equal(self.predictions[i], tf.argmax(self.input_y[i], 0)), "float"),
                                    name="accuracy"))
-        self.sentence_attention = sen_alpha
+
+        self.sentence_attention = tf.reshape(sen_alpha, [batch_size])
 
         # tf.summary.scalar('loss',self.total_loss)
         tf.summary.scalar('loss', self.total_loss)

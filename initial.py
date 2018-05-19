@@ -163,6 +163,8 @@ def init():
     test_sen = {}  # {entity pair:[[sentence 1],[sentence 2]...]}
     test_ans = {}  # {entity pair:[labels,...]} the labels is N-hot vector (N is the number of multi-label)
 
+    test_ori = {} # {entity par:[original_sen1], [original_sen2],...]}
+
     f = open('./origin_data/KBP/test.txt', 'r', encoding='utf-8')
     count = 0
     while True:
@@ -185,6 +187,8 @@ def init():
         tup = (en1, en2)
         count += 1
 
+        sentence = content[5:-1]
+
         if tup not in test_sen:
             test_sen[tup] = []
             y_id = relation
@@ -192,11 +196,13 @@ def init():
             label = [0 for i in range(len(relation2id))]
             label[y_id] = 1
             test_ans[tup] = label
+            test_ori[tup] = []
+
         else:
             y_id = relation
             test_ans[tup][y_id] = 1
 
-        sentence = content[5:-1]
+        test_ori[tup].append(sentence)
 
         en1pos = 0
         en2pos = 0
@@ -242,6 +248,7 @@ def init():
     train_y = []
     test_x = []
     test_y = []
+    test_o = []
 
     print('organizing train data')
     f = open('./data/KBP/train_q&a.txt', 'w', encoding='utf-8')
@@ -269,18 +276,21 @@ def init():
                 tempstr = tempstr + str(j) + '\t'
         f.write(str(temp) + '\t' + i[0] + '\t' + i[1] + '\t' + tempstr + '\n')
         temp += 1
+        test_o.append(test_ori[i])
     f.close()
 
     train_x = np.array(train_x)
     train_y = np.array(train_y)
     test_x = np.array(test_x)
     test_y = np.array(test_y)
+    test_o = np.array(test_o)
 
     np.save('./data/KBP/vec.npy', vec)
     np.save('./data/KBP/train_x.npy', train_x)
     np.save('./data/KBP/train_y.npy', train_y)
     np.save('./data/KBP/testall_x.npy', test_x)
     np.save('./data/KBP/testall_y.npy', test_y)
+    np.save('./data/KBP/testall_o.npy', test_o)
 
     # get test data for P@N evaluation, in which only entity pairs with more than 1 sentence exist
     # print('get test data for p@n test')
